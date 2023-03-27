@@ -33,6 +33,7 @@ sessionStorage = {}
 # Внутри функции доступен request.json - это JSON,
 # который отправила нам Алиса в запросе POST
 def main():
+    global slon
     logging.info(f'Request: {request.json!r}')
 
     # Начинаем формировать ответ, согласно документации
@@ -60,9 +61,11 @@ def main():
 
 
 def handle_dialog(req, res):
+    global slon
     user_id = req['session']['user_id']
 
     if req['session']['new']:
+        slon = True
         # Это новый пользователь.
         # Инициализируем сессию и поприветствуем его.
         # Запишем подсказки, которые мы ему покажем в первый раз
@@ -93,13 +96,21 @@ def handle_dialog(req, res):
         'куплю',
         'покупаю',
         'хорошо',
-        'Я покупаю',
-        'Я куплю'
+        'я покупаю',
+        'я куплю',
     ]:
         # Пользователь согласился, прощаемся.
-        res['response']['text'] = 'Слона можно найти на Яндекс.Маркете!'
+        res['response']['text'] = 'Слона можно найти на Яндекс.Маркете!\nПривет! Купи кролика!'
         res['response']['end_session'] = False
         slon = False
+        sessionStorage[user_id] = {
+            'suggests': [
+                "Не хочу.",
+                "Не буду.",
+                "Отстань!",
+            ]
+        }
+        res['response']['buttons'] = get_suggests(user_id)
         return
 
     # Если нет, то убеждаем его купить слона!
@@ -135,25 +146,8 @@ def get_suggests(user_id):
 
 
 def handle_dialog_krol(req, res):
+    global slon
     user_id = req['session']['user_id']
-
-    if req['session']['new']:
-        # Это новый пользователь.
-        # Инициализируем сессию и поприветствуем его.
-        # Запишем подсказки, которые мы ему покажем в первый раз
-
-        sessionStorage[user_id] = {
-            'suggests': [
-                "Не хочу.",
-                "Не буду.",
-                "Отстань!",
-            ]
-        }
-        # Заполняем текст ответа
-        res['response']['text'] = 'Привет! Купи кролика!'
-        # Получим подсказки
-        res['response']['buttons'] = get_suggests(user_id)
-        return
 
     # Сюда дойдем только, если пользователь не новый,
     # и разговор с Алисой уже был начат
@@ -168,22 +162,22 @@ def handle_dialog_krol(req, res):
         'куплю',
         'покупаю',
         'хорошо',
-        'Я покупаю',
-        'Я куплю'
+        'я покупаю',
+        'я куплю'
     ]:
         # Пользователь согласился, прощаемся.
         res['response']['text'] = 'кролика можно найти на Яндекс.Маркете!'
-        res['response']['end_session'] = False
+        res['response']['end_session'] = True
+        slon = False
         return
 
     # Если нет, то убеждаем его купить слона!
     res['response']['text'] = \
         f"Все говорят '{req['request']['original_utterance']}', а ты купи кролика!"
-    res['response']['buttons'] = get_suggests(user_id)
+    res['response']['buttons'] = get_suggests_krol(user_id)
 
 
-# Функция возвращает две подсказки для ответа.
-def get_suggests(user_id):
+def get_suggests_krol(user_id):
     session = sessionStorage[user_id]
 
     # Выбираем две первые подсказки из массива.
@@ -201,7 +195,7 @@ def get_suggests(user_id):
     if len(suggests) < 2:
         suggests.append({
             "title": "Ладно",
-            "url": "https://market.yandex.ru/search?text=слон",
+            "url": "https://market.yandex.ru/search?text=кролик",
             "hide": True
         })
 
